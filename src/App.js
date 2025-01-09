@@ -16,16 +16,14 @@ function App() {
           const data = await response.json();
           console.log("Fetched orders:", data);
 
-          // Initialize orders state to be an array of arrays
           setOrders(
             Array(cardsCount)
-              .fill([]) // Initialize all orders as empty arrays
+              .fill([])
               .map((_, index) => {
-                // Find the order for the current table number
                 const tableOrder = data.find(
                   (order) => order.table_number === index + 1
                 );
-                return tableOrder ? tableOrder.orders : []; // Return the orders array if found
+                return tableOrder ? tableOrder.orders : [];
               })
           );
         } else {
@@ -37,41 +35,7 @@ function App() {
     };
 
     fetchOrders();
-
-    // Establish WebSocket connection
-    const socket = new WebSocket(`${BASE_URL}/ws`);
-    socket.onmessage = (event) => {
-      let updatedOrders;
-      try {
-        updatedOrders = JSON.parse(event.data);
-        if (!Array.isArray(updatedOrders)) {
-          console.error("WebSocket data is not an array:", updatedOrders);
-          return;
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-        return;
-      }
-
-      console.log("WebSocket update:", updatedOrders);
-
-      // Update state with WebSocket data
-      setOrders(
-        Array(cardsCount)
-          .fill([]) // Ensure all orders are initialized as empty arrays
-          .map((_, index) => {
-            const tableOrder = updatedOrders.find(
-              (order) => order.table_number === index + 1
-            );
-            return tableOrder ? tableOrder.orders : [];
-          })
-      );
-    };
   }, []);
-
-  // Fallback for when orders data might not be loaded yet
-  const ordersToRender =
-    orders?.length === cardsCount ? orders : Array(cardsCount).fill([]);
 
   const handleSaveOrder = async (index, selectedItems) => {
     const tableNumber = index + 1;
@@ -87,7 +51,6 @@ function App() {
         throw new Error("Failed to save order.");
       }
 
-      // Optimistic update for orders
       const updatedOrders = [...orders];
       updatedOrders[index] = selectedItems;
       setOrders(updatedOrders);
@@ -101,15 +64,17 @@ function App() {
     const tableNumber = index + 1;
 
     try {
-      const response = await fetch(`${BASE_URL}/orders/${tableNumber}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${BASE_URL}/orders?tableNumber=${tableNumber}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to clear order.");
       }
 
-      // Optimistic update for clearing orders
       const updatedOrders = [...orders];
       updatedOrders[index] = [];
       setOrders(updatedOrders);
@@ -149,7 +114,7 @@ function App() {
             <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
               <OutlinedCard
                 index={index + 1}
-                orders={ordersToRender[index] || []} // Ensure it's always an array
+                orders={orders[index] || []}
                 onSaveOrder={(selectedItems) =>
                   handleSaveOrder(index, selectedItems)
                 }
